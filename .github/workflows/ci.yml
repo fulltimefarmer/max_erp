@@ -1,0 +1,72 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    name: Backend tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: uv sync --extra dev
+
+      - name: Lint
+        run: uv run ruff check .
+
+      - name: Run tests
+        run: uv run pytest
+
+  frontend:
+    name: Frontend build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+  deploy:
+    name: Build & deploy (Mac mini)
+    needs: [backend, frontend]
+    if: github.ref == 'refs/heads/main'
+    # This job runs on a self-hosted runner installed on the Mac mini.
+    # Register it with: `./config.sh --labels macmini` on the target machine.
+    runs-on: [self-hosted, macmini]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build images
+        run: docker compose build
+
+      - name: Deploy stack
+        run: docker compose up -d
+
+      - name: Prune dangling images
+        run: docker image prune -f

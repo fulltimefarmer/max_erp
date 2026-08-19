@@ -139,8 +139,8 @@ async def test_permissions_me_user(client: AsyncClient):
 
     menu_codes = {m["code"] for m in body["menus"]}
     page_codes = {p["code"] for p in body["pages"]}
-    assert menu_codes == {"dashboard"}
-    assert page_codes == {"dashboard"}
+    assert menu_codes == {"dashboard", "profile"}
+    assert page_codes == {"dashboard", "profile"}
 
     access = {a["model"]: a for a in body["model_accesses"]}
     assert access["res.users"]["read"] is True

@@ -24,6 +24,7 @@ DEFAULT_ROLES = [
 # (code, name, parent_code, sequence, icon, role_names)
 MENU_SEED = [
     ("dashboard", "Dashboard", None, 10, None, ["root", "manager", "user"]),
+    ("profile", "My Profile", None, 15, None, ["root", "manager", "hr_director", "user"]),
     ("sales", "Sales", None, 20, None, ["root", "manager"]),
     ("sales.orders", "Sales Orders", "sales", 10, None, ["root", "manager"]),
     ("inventory", "Inventory", None, 30, None, ["root", "manager"]),
@@ -41,6 +42,7 @@ MENU_SEED = [
 # (code, name, route, role_names)
 PAGE_SEED = [
     ("dashboard", "Dashboard", "/dashboard", ["root", "manager", "user"]),
+    ("profile", "My Profile", "/profile", ["root", "manager", "hr_director", "user"]),
     ("sales.orders", "Sales Orders", "/sales/orders", ["root", "manager"]),
     ("inventory.products", "Products", "/inventory/products", ["root", "manager"]),
     ("accounting", "Accounting", "/accounting", ["root"]),

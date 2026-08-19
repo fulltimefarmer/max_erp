@@ -17,6 +17,7 @@ logger = get_logger(__name__)
 DEFAULT_ROLES = [
     ("root", "Super administrator with full access to all resources"),
     ("manager", "Manager with access to sales and inventory"),
+    ("hr_director", "Human Resources director who manages employees"),
     ("user", "Standard user with limited access"),
 ]
 
@@ -31,6 +32,10 @@ MENU_SEED = [
     ("settings", "Settings", None, 50, None, ["root"]),
     ("settings.users", "Users", "settings", 10, None, ["root"]),
     ("settings.access", "Access Rights", "settings", 20, None, ["root"]),
+    ("hr", "Human Resources", None, 60, None, ["root", "hr_director"]),
+    ("hr.employees", "Employees", "hr", 10, None, ["root", "hr_director"]),
+    ("hr.departments", "Departments", "hr", 20, None, ["root", "hr_director"]),
+    ("hr.jobs", "Job Positions", "hr", 30, None, ["root", "hr_director"]),
 ]
 
 # (code, name, route, role_names)
@@ -41,6 +46,9 @@ PAGE_SEED = [
     ("accounting", "Accounting", "/accounting", ["root"]),
     ("settings.users", "Users", "/settings/users", ["root"]),
     ("settings.access", "Access Rights", "/settings/access", ["root"]),
+    ("hr.employees", "Employees", "/hr/employees", ["root", "hr_director"]),
+    ("hr.departments", "Departments", "/hr/departments", ["root", "hr_director"]),
+    ("hr.jobs", "Job Positions", "/hr/jobs", ["root", "hr_director"]),
 ]
 
 # (role_name, model, create, read, write, unlink)
@@ -51,6 +59,10 @@ MODEL_ACCESS_SEED = [
     ("manager", "ir.page", False, True, True, False),
     ("manager", "ir.model.access", False, True, False, False),
     ("user", "res.users", False, True, False, False),
+    ("hr_director", "res.users", False, True, False, False),
+    ("hr_director", "hr.employee", True, True, True, True),
+    ("hr_director", "hr.department", True, True, True, True),
+    ("hr_director", "hr.job", True, True, True, True),
 ]
 
 

@@ -18,6 +18,9 @@ MODEL_NAMES = [
     "ir.menu",
     "ir.page",
     "ir.model.access",
+    "hr.employee",
+    "hr.department",
+    "hr.job",
 ]
 
 PERMISSIONS = ("create", "read", "write", "unlink")

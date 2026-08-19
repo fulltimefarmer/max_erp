@@ -9,7 +9,7 @@ services:
       ROOT_USERNAME: ${ROOT_USERNAME:-root}
       ROOT_EMAIL: ${ROOT_EMAIL:-root@maxerp.com}
       ROOT_PASSWORD: ${ROOT_PASSWORD:-root12345}
-      CORS_ORIGINS: '["http://localhost:3000"]'
+      CORS_ORIGINS: '["http://localhost:3000", "http://localhost:3001"]'
       DEBUG: "false"
     extra_hosts:
       - "host.docker.internal:host-gateway"

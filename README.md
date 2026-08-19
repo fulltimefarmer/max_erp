@@ -115,8 +115,13 @@ uv run uvicorn app.main:app --reload
 cd frontend
 cp .env.example .env.local
 npm install
-npm run dev
+npm run dev           # serves on http://localhost:3001 (see note below)
 ```
+
+> Note: `npm run dev` runs on port **3001** on purpose. The Docker deployment
+> occupies port **3000**, and on Docker Desktop a lingering dev server can
+> shadow that port (binding it while serving stale, broken CSS). Keeping dev on
+> 3001 avoids the collision; the backend allows both origins via `CORS_ORIGINS`.
 
 ### CI/CD on the Mac mini
 

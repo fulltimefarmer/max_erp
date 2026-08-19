@@ -143,5 +143,24 @@ jobs:
         if: needs.changes.outputs.frontend == 'true'
         run: docker compose up -d frontend
 
+      # Guard against a lingering `next dev` process shadowing port 3000 on
+      # Docker Desktop: it binds the port but serves broken CSS, so the page
+      # renders unstyled. Assert the deployed page actually serves its CSS.
+      - name: Verify frontend is serving
+        if: needs.changes.outputs.frontend == 'true'
+        run: |
+          set -euo pipefail
+          HTML=$(curl -fsS http://localhost:3000/)
+          CSS=$(printf '%s' "$HTML" | grep -oE 'href="[^"]+\.css[^"]*"' | head -1 | sed -E 's/^href="//; s/"$//')
+          if [ -z "$CSS" ]; then
+            echo "::error::served HTML contains no stylesheet link"
+            exit 1
+          fi
+          if ! curl -fsS "http://localhost:3000${CSS}" >/dev/null; then
+            echo "::error::stylesheet ${CSS} returned a non-200 response (stale dev server shadowing port 3000?)"
+            exit 1
+          fi
+          echo "Frontend serving OK: ${CSS}"
+
       - name: Prune dangling images
         run: docker image prune -f

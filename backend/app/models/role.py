@@ -7,7 +7,7 @@ from app.models.base import Base
 
 
 class Role(Base):
-    """A role used for RBAC authorization (e.g. ``root`` and ``user``)."""
+    """A role (group) used for RBAC authorization, analogous to an Odoo group."""
 
     __tablename__ = "roles"
 
@@ -20,4 +20,16 @@ class Role(Base):
 
     users: Mapped[list["User"]] = relationship(  # noqa: F821
         secondary="user_roles", back_populates="roles"
+    )
+
+    menus: Mapped[list["Menu"]] = relationship(  # noqa: F821
+        secondary="role_menus", back_populates="roles"
+    )
+
+    pages: Mapped[list["Page"]] = relationship(  # noqa: F821
+        secondary="role_pages", back_populates="roles"
+    )
+
+    model_accesses: Mapped[list["ModelAccess"]] = relationship(  # noqa: F821
+        back_populates="role", cascade="all, delete-orphan"
     )

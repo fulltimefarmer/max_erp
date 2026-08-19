@@ -1,10 +1,12 @@
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
 from app.core.database import Base, get_db
 from app.core.security import hash_password
+from app.db.init_db import seed_rbac
 from app.main import app
 from app.models.role import Role
 from app.models.user import User
@@ -23,10 +25,11 @@ async def client():
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
 
     async with session_factory() as session:
-        root_role = Role(name="root", description="Super administrator")
-        user_role = Role(name="user", description="Standard user")
-        session.add_all([root_role, user_role])
-        await session.commit()
+        await seed_rbac(session)
+
+        root_role = (
+            await session.execute(select(Role).where(Role.name == "root"))
+        ).scalar_one()
 
         root = User(
             username="root",

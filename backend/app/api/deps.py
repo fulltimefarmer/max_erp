@@ -6,6 +6,7 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import access
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.security import decode_token
@@ -68,3 +69,58 @@ def require_roles(*role_names: str):
 
 
 require_root = require_roles("root")
+
+
+def require_model_access(model: str, operation: str):
+    """Return a dependency that enforces model-level CRUD access.
+
+    Mirrors Odoo's ``ir.model.access`` check: the user is allowed only if at
+    least one of their roles grants ``operation`` on ``model``.
+    """
+
+    async def dependency(
+        current_user: Annotated[User, Depends(get_current_user)],
+        db: Annotated[AsyncSession, Depends(get_db)],
+    ) -> User:
+        if not await access.has_model_access(db, current_user, model, operation):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Insufficient model access: {operation} on {model}",
+            )
+        return current_user
+
+    return dependency
+
+
+def require_menu(code: str):
+    """Return a dependency that only allows users who can see the given menu."""
+
+    async def dependency(
+        current_user: Annotated[User, Depends(get_current_user)],
+        db: Annotated[AsyncSession, Depends(get_db)],
+    ) -> User:
+        if not await access.has_menu_access(db, current_user, code):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Insufficient menu access: {code}",
+            )
+        return current_user
+
+    return dependency
+
+
+def require_page(code: str):
+    """Return a dependency that only allows users who can open the given page."""
+
+    async def dependency(
+        current_user: Annotated[User, Depends(get_current_user)],
+        db: Annotated[AsyncSession, Depends(get_db)],
+    ) -> User:
+        if not await access.has_page_access(db, current_user, code):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Insufficient page access: {code}",
+            )
+        return current_user
+
+    return dependency

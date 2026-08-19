@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import require_root
+from app.api.deps import require_model_access
 from app.core.database import get_db
 from app.core.logging import get_logger
 from app.core.security import hash_password
@@ -23,7 +23,7 @@ async def _get_role(db: AsyncSession, name: str) -> Role | None:
 
 @router.get("", response_model=list[UserRead])
 async def list_users(
-    current_user: Annotated[User, Depends(require_root)],
+    current_user: Annotated[User, Depends(require_model_access("res.users", "read"))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> list[User]:
     result = await db.execute(select(User).order_by(User.id))
@@ -33,7 +33,7 @@ async def list_users(
 @router.post("", response_model=UserRead, status_code=status.HTTP_201_CREATED)
 async def create_user(
     payload: UserCreate,
-    current_user: Annotated[User, Depends(require_root)],
+    current_user: Annotated[User, Depends(require_model_access("res.users", "create"))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> User:
     existing = (
@@ -62,7 +62,7 @@ async def create_user(
 @router.get("/{user_id}", response_model=UserRead)
 async def get_user(
     user_id: int,
-    current_user: Annotated[User, Depends(require_root)],
+    current_user: Annotated[User, Depends(require_model_access("res.users", "read"))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> User:
     user = (await db.execute(select(User).where(User.id == user_id))).scalar_one_or_none()
@@ -75,7 +75,7 @@ async def get_user(
 async def update_user(
     user_id: int,
     payload: UserUpdate,
-    current_user: Annotated[User, Depends(require_root)],
+    current_user: Annotated[User, Depends(require_model_access("res.users", "write"))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> User:
     user = (await db.execute(select(User).where(User.id == user_id))).scalar_one_or_none()
@@ -107,7 +107,7 @@ async def update_user(
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user(
     user_id: int,
-    current_user: Annotated[User, Depends(require_root)],
+    current_user: Annotated[User, Depends(require_model_access("res.users", "unlink"))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> None:
     user = (await db.execute(select(User).where(User.id == user_id))).scalar_one_or_none()

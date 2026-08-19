@@ -220,6 +220,10 @@ __marimo__/
 # ---------------------------------------------------------------------------
 # Node.js / Next.js (monorepo frontend)
 # ---------------------------------------------------------------------------
+# Re-include the frontend source `lib/` directory that the Python `lib/`
+# rule above would otherwise ignore.
+!frontend/src/lib/
+!frontend/src/lib/**
 node_modules/
 .next/
 out/

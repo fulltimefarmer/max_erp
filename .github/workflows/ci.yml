@@ -5,9 +5,13 @@ on:
     branches: [main]
   pull_request:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   backend:
-    name: Backend tests
+    name: Backend (lint + test)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -19,9 +23,10 @@ jobs:
         uses: astral-sh/setup-uv@v5
         with:
           python-version: "3.12"
+          enable-cache: true
 
       - name: Install dependencies
-        run: uv sync --extra dev
+        run: uv sync --frozen --extra dev
 
       - name: Lint
         run: uv run ruff check .
@@ -30,7 +35,7 @@ jobs:
         run: uv run pytest
 
   frontend:
-    name: Frontend build
+    name: Frontend (typecheck + lint + build)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -42,12 +47,17 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Install dependencies
         run: npm ci
 
       - name: Typecheck
         run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
 
       - name: Build
         run: npm run build
@@ -56,17 +66,46 @@ jobs:
     name: Build & deploy (Mac mini)
     needs: [backend, frontend]
     if: github.ref == 'refs/heads/main'
-    # This job runs on a self-hosted runner installed on the Mac mini.
-    # Register it with: `./config.sh --labels macmini` on the target machine.
+    # Runs on a self-hosted runner installed on the Mac mini.
+    # Register it with: ./config.sh --labels macmini (see README / run.sh)
     runs-on: [self-hosted, macmini]
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
+      # Rebuild .env from GitHub Secrets on every run. The default checkout
+      # `git clean` removes untracked files, so a hand-written .env would be
+      # wiped between deploys. Any secret not configured falls back to the
+      # defaults baked into docker-compose.yml.
+      - name: Prepare .env from secrets
+        env:
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+          JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
+          ROOT_USERNAME: ${{ secrets.ROOT_USERNAME }}
+          ROOT_EMAIL: ${{ secrets.ROOT_EMAIL }}
+          ROOT_PASSWORD: ${{ secrets.ROOT_PASSWORD }}
+          AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
+        run: |
+          : > .env
+          [ -n "$POSTGRES_USER" ] && echo "POSTGRES_USER=$POSTGRES_USER" >> .env || true
+          [ -n "$POSTGRES_PASSWORD" ] && echo "POSTGRES_PASSWORD=$POSTGRES_PASSWORD" >> .env || true
+          [ -n "$POSTGRES_DB" ] && echo "POSTGRES_DB=$POSTGRES_DB" >> .env || true
+          [ -n "$JWT_SECRET_KEY" ] && echo "JWT_SECRET_KEY=$JWT_SECRET_KEY" >> .env || true
+          [ -n "$ROOT_USERNAME" ] && echo "ROOT_USERNAME=$ROOT_USERNAME" >> .env || true
+          [ -n "$ROOT_EMAIL" ] && echo "ROOT_EMAIL=$ROOT_EMAIL" >> .env || true
+          [ -n "$ROOT_PASSWORD" ] && echo "ROOT_PASSWORD=$ROOT_PASSWORD" >> .env || true
+          [ -n "$AUTH_SECRET" ] && echo "AUTH_SECRET=$AUTH_SECRET" >> .env || true
+          if [ -z "$JWT_SECRET_KEY" ] || [ -z "$AUTH_SECRET" ]; then
+            echo "::warning::JWT_SECRET_KEY and/or AUTH_SECRET not set; using insecure defaults."
+          fi
+
       - name: Build images
-        run: docker compose build
+        run: docker compose build --pull
 
       - name: Deploy stack
-        run: docker compose up -d
+        run: docker compose up -d --remove-orphans
 
       - name: Prune dangling images
         run: docker image prune -f

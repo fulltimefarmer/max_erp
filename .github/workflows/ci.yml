@@ -10,8 +10,35 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Detect changed paths
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Filter changed paths
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+              - 'docker-compose.yml'
+              - '.env.example'
+            frontend:
+              - 'frontend/**'
+              - 'docker-compose.yml'
+              - '.env.example'
+
   backend:
     name: Backend (lint + test)
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -36,6 +63,8 @@ jobs:
 
   frontend:
     name: Frontend (typecheck + lint + build)
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -64,10 +93,10 @@ jobs:
 
   deploy:
     name: Build & deploy (Mac mini)
-    needs: [backend, frontend]
-    if: github.ref == 'refs/heads/main'
+    needs: [changes, backend, frontend]
+    if: github.ref == 'refs/heads/main' && (needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true')
     # Runs on a self-hosted runner installed on the Mac mini.
-    # Register it with: ./config.sh --labels macmini (see README / run.sh)
+    # Register it with: ./config.sh --labels macmini (see README)
     runs-on: [self-hosted, macmini]
     timeout-minutes: 30
     steps:
@@ -101,11 +130,22 @@ jobs:
             echo "::warning::JWT_SECRET_KEY and/or AUTH_SECRET not set; using insecure defaults."
           fi
 
-      - name: Build images
-        run: docker compose build --pull
+      # Backend is deployed first so it is always up before the frontend.
+      - name: Build backend image
+        if: needs.changes.outputs.backend == 'true'
+        run: docker compose build --pull backend
 
-      - name: Deploy stack
-        run: docker compose up -d --remove-orphans
+      - name: Deploy backend
+        if: needs.changes.outputs.backend == 'true'
+        run: docker compose up -d backend
+
+      - name: Build frontend image
+        if: needs.changes.outputs.frontend == 'true'
+        run: docker compose build --pull frontend
+
+      - name: Deploy frontend
+        if: needs.changes.outputs.frontend == 'true'
+        run: docker compose up -d frontend
 
       - name: Prune dangling images
         run: docker image prune -f

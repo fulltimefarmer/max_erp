@@ -150,7 +150,17 @@ jobs:
         if: needs.changes.outputs.frontend == 'true'
         run: |
           set -euo pipefail
-          HTML=$(curl -fsS http://localhost:3000/)
+          # Container recreation leaves a brief gap before the server is ready.
+          HTML=""
+          for _ in $(seq 1 30); do
+            HTML=$(curl -fsS http://localhost:3000/ 2>/dev/null || true)
+            [ -n "$HTML" ] && break
+            sleep 2
+          done
+          if [ -z "$HTML" ]; then
+            echo "::error::frontend did not become ready at http://localhost:3000/"
+            exit 1
+          fi
           CSS=$(printf '%s' "$HTML" | grep -oE 'href="[^"]+\.css[^"]*"' | head -1 | sed -E 's/^href="//; s/"$//')
           if [ -z "$CSS" ]; then
             echo "::error::served HTML contains no stylesheet link"

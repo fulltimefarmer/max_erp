@@ -37,8 +37,6 @@ jobs:
 
   backend:
     name: Backend (lint + test)
-    needs: changes
-    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -63,8 +61,6 @@ jobs:
 
   frontend:
     name: Frontend (typecheck + lint + build)
-    needs: changes
-    if: needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:

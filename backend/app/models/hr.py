@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, String, func
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -86,6 +86,97 @@ class Employee(Base):
     @property
     def department_name(self) -> str | None:
         return self.department.name if self.department else None
+
+    @property
+    def manager_name(self) -> str | None:
+        return self.manager.name if self.manager else None
+
+
+class LeaveType(Base):
+    """A leave type (e.g. annual, sick), analogous to Odoo's ``hr.leave.type``."""
+
+    __tablename__ = "hr_leave_types"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    code: Mapped[str] = mapped_column(String(50), unique=True, index=True, nullable=False)
+    allowance_days: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
+class LeaveRequest(Base):
+    """A leave/time-off request, analogous to Odoo's ``hr.leave``."""
+
+    __tablename__ = "hr_leaves"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    employee_id: Mapped[int] = mapped_column(
+        ForeignKey("hr_employees.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    leave_type_id: Mapped[int] = mapped_column(
+        ForeignKey("hr_leave_types.id", ondelete="RESTRICT"), nullable=False
+    )
+    date_from: Mapped[date] = mapped_column(Date, nullable=False)
+    date_to: Mapped[date] = mapped_column(Date, nullable=False)
+    number_of_days: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    state: Mapped[str] = mapped_column(String(20), default="draft", nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    approved_by: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    employee: Mapped["Employee"] = relationship(lazy="selectin")
+    leave_type: Mapped["LeaveType"] = relationship(lazy="selectin")
+
+    @property
+    def employee_name(self) -> str:
+        return self.employee.name
+
+    @property
+    def leave_type_name(self) -> str:
+        return self.leave_type.name
+
+
+class Appraisal(Base):
+    """An employee performance appraisal, analogous to Odoo's ``hr.appraisal``."""
+
+    __tablename__ = "hr_appraisals"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    employee_id: Mapped[int] = mapped_column(
+        ForeignKey("hr_employees.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    manager_id: Mapped[int | None] = mapped_column(
+        ForeignKey("hr_employees.id", ondelete="SET NULL"), nullable=True
+    )
+    appraisal_date: Mapped[date] = mapped_column(Date, nullable=False)
+    final_rating: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    state: Mapped[str] = mapped_column(String(20), default="draft", nullable=False)
+    goals: Mapped[str | None] = mapped_column(Text, nullable=True)
+    feedback: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    employee: Mapped["Employee"] = relationship(foreign_keys=[employee_id], lazy="selectin")
+    manager: Mapped["Employee | None"] = relationship(
+        foreign_keys=[manager_id], lazy="selectin"
+    )
+
+    @property
+    def employee_name(self) -> str:
+        return self.employee.name
 
     @property
     def manager_name(self) -> str | None:

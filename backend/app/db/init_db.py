@@ -6,6 +6,7 @@ from app.core.config import settings
 from app.core.database import async_session_factory
 from app.core.logging import get_logger
 from app.core.security import hash_password
+from app.models.hr import LeaveType
 from app.models.menu import Menu
 from app.models.model_access import ModelAccess
 from app.models.page import Page
@@ -37,6 +38,8 @@ MENU_SEED = [
     ("hr.employees", "Employees", "hr", 10, None, ["root", "hr_director"]),
     ("hr.departments", "Departments", "hr", 20, None, ["root", "hr_director"]),
     ("hr.jobs", "Job Positions", "hr", 30, None, ["root", "hr_director"]),
+    ("hr.leaves", "Leaves", "hr", 40, None, ["root", "hr_director"]),
+    ("hr.appraisals", "Appraisals", "hr", 50, None, ["root", "hr_director"]),
 ]
 
 # (code, name, route, role_names)
@@ -51,6 +54,8 @@ PAGE_SEED = [
     ("hr.employees", "Employees", "/hr/employees", ["root", "hr_director"]),
     ("hr.departments", "Departments", "/hr/departments", ["root", "hr_director"]),
     ("hr.jobs", "Job Positions", "/hr/jobs", ["root", "hr_director"]),
+    ("hr.leaves", "Leaves", "/hr/leaves", ["root", "hr_director"]),
+    ("hr.appraisals", "Appraisals", "/hr/appraisals", ["root", "hr_director"]),
 ]
 
 # (role_name, model, create, read, write, unlink)
@@ -65,6 +70,16 @@ MODEL_ACCESS_SEED = [
     ("hr_director", "hr.employee", True, True, True, True),
     ("hr_director", "hr.department", True, True, True, True),
     ("hr_director", "hr.job", True, True, True, True),
+    ("hr_director", "hr.leave.type", True, True, True, True),
+    ("hr_director", "hr.leave", True, True, True, True),
+    ("hr_director", "hr.appraisal", True, True, True, True),
+]
+
+# (code, name, allowance_days)
+LEAVE_TYPE_SEED = [
+    ("annual", "Annual Leave", 15),
+    ("sick", "Sick Leave", 10),
+    ("personal", "Personal Leave", 5),
 ]
 
 
@@ -140,8 +155,23 @@ async def _seed_model_accesses(db: AsyncSession, roles: dict[str, Role]) -> None
         access.perm_unlink = unlink
 
 
+async def _seed_leave_types(db: AsyncSession) -> None:
+    existing = {
+        leave_type.code: leave_type
+        for leave_type in (await db.execute(select(LeaveType))).scalars().all()
+    }
+    for code, name, allowance_days in LEAVE_TYPE_SEED:
+        leave_type = existing.get(code)
+        if leave_type is None:
+            leave_type = LeaveType(code=code, name=name, allowance_days=allowance_days)
+            db.add(leave_type)
+        else:
+            leave_type.name = name
+            leave_type.allowance_days = allowance_days
+
+
 async def seed_rbac(db: AsyncSession) -> None:
-    """Seed roles, menus, pages and model access into the given session.
+    """Seed roles, menus, pages, model access and leave types into the session.
 
     Idempotent: existing rows are updated in place rather than duplicated.
     """
@@ -153,6 +183,7 @@ async def seed_rbac(db: AsyncSession) -> None:
     await _seed_menus(db, roles)
     await _seed_pages(db, roles)
     await _seed_model_accesses(db, roles)
+    await _seed_leave_types(db)
     await db.flush()
 
 

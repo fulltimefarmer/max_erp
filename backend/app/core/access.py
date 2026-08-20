@@ -21,6 +21,9 @@ MODEL_NAMES = [
     "hr.employee",
     "hr.department",
     "hr.job",
+    "hr.leave.type",
+    "hr.leave",
+    "hr.appraisal",
 ]
 
 PERMISSIONS = ("create", "read", "write", "unlink")

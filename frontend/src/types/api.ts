@@ -94,3 +94,42 @@ export interface ModelAccessRecord {
   perm_unlink: boolean;
   created_at: string;
 }
+
+export interface LeaveType {
+  id: number;
+  name: string;
+  code: string;
+  allowance_days: number;
+  active: boolean;
+  created_at: string;
+}
+
+export interface LeaveRequest {
+  id: number;
+  employee_id: number;
+  leave_type_id: number;
+  date_from: string;
+  date_to: string;
+  number_of_days: number;
+  state: string;
+  description: string | null;
+  approved_by: string | null;
+  approved_at: string | null;
+  created_at: string;
+  employee_name: string;
+  leave_type_name: string;
+}
+
+export interface Appraisal {
+  id: number;
+  employee_id: number;
+  manager_id: number | null;
+  appraisal_date: string;
+  final_rating: number | null;
+  state: string;
+  goals: string | null;
+  feedback: string | null;
+  created_at: string;
+  employee_name: string;
+  manager_name: string | null;
+}

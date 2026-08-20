@@ -2,6 +2,8 @@ import {
   Boxes,
   Briefcase,
   Building2,
+  CalendarDays,
+  ClipboardCheck,
   LayoutDashboard,
   Receipt,
   Settings,
@@ -31,6 +33,8 @@ export const NAV_ICONS: Record<string, LucideIcon> = {
   "hr.employees": Users,
   "hr.departments": Building2,
   "hr.jobs": Briefcase,
+  "hr.leaves": CalendarDays,
+  "hr.appraisals": ClipboardCheck,
 };
 
 export function navIcon(code: string): LucideIcon {
